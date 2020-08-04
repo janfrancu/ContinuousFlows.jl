@@ -1,0 +1,4 @@
+name = "ContinuousFlows"
+uuid = "a619b042-bc39-44bf-9795-de5439ba9456"
+authors = ["Jan Francu <jan.francu@gmail.com>"]
+version = "0.1.0"
