@@ -1,25 +1,36 @@
 using Flux, Flux.Zygote
 
 struct RealNVP
-	c # some conditioner
-	mask
+	cα  # location conditioner
+	cβ  # scale conditioner
+	mask::Vector{Bool}
 end
 
-function RealNVP(isize, even=true)
+function RealNVP(isize::Int, conditioner_builder::Function, even=true)
 	mask = even ? (mod.(1:isize, 2) .== 0) : (mod.(1:isize, 2) .== 1)
 	d = sum(mask)
-	RealNVP(Dense(d, 2*(isize - d)), mask)
+	cα = conditioner_builder(d, isize - d, "relu", "identity")
+	cβ = conditioner_builder(d, isize - d, "tanh", "exp")
+	return RealNVP(cα, cβ, mask)
 end
 
 function (nvp::RealNVP)(xl)
 	X, logJ = xl
 	X_cond = X[nvp.mask,:]
-	α, β = nvp.c(X_cond)
+	α, β = nvp.cα(X_cond), nvp.cβ(X_cond)
 	Y = α .+ β .* X[.~nvp.mask,:]
-	_cat_with_mask(X_cond, Y, nvp.mask), sum(log.(abs.(β)))
+	_cat_with_mask(X_cond, Y, nvp.mask), logJ .+ sum(log.(abs.(β)), dims=1)
 end
 
-Flux.trainable(nvp::RealNVP) = (nvp.c, )
+function inv_flow(nvp::RealNVP, yl)
+	Y, logJ = yl
+	Y_cond = Y[nvp.mask,:]
+	α, β = nvp.cα(Y_cond), nvp.cβ(Y_cond)
+	X = (Y[.~nvp.mask,:] .- α) ./ β
+	_cat_with_mask(Y_cond, X, nvp.mask), logJ .- sum(log.(abs.(β)), dims=1)
+end
+
+Flux.trainable(nvp::RealNVP) = (nvp.cα, nvp.cβ, )
 
 function _cat_with_mask(x1, x2, mask)
 	M1, N = size(x1)
