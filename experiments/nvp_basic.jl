@@ -1,12 +1,13 @@
 using Revise
 
 using Plots; gr()
+using Distributions
+using DistributionsAD
+
 using ContinuousFlows
 using ContinuousFlows.Flux
-using Distributions
 
 using ToyProblems
-using SumDenseProduct
 
 build_mlp(ks::Vector{Int}, fs::Vector) = Flux.Chain(map(i -> Dense(i[2],i[3],i[1]), zip(fs,ks[1:end-1],ks[2:end]))...)
 
@@ -78,7 +79,7 @@ end
 Flux.update!(opt, ps, gs)
 
 
-train_steps = 0
+train_steps = 1
 Flux.@epochs p.epochs for batch in data
     global train_steps
     l = 0.0f0
@@ -101,8 +102,7 @@ yx = inv_flow(model, (base_samples, _init_logJ(base_samples)))[1]
 scatter(base_samples[1,:], base_samples[2,:], size=(800,800))
 scatter!(x[1,:], x[2,:], size=(800,800))
 scatter!(yx[1,:], yx[2,:], ylim=(-6.0, 6.0), xlim=(-6.0,6.0) , size=(800,800))
-savefig("./RealNVP_4_flows_2_layer_relu_tanh.png")
-
+savefig("./RealNVP_4_flows_2_layer_relu_tanh_DAD.png")
 # heatmap(P_base, title="p_base", aspect_ratio=:equal)
 
 

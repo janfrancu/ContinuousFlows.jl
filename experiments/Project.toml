@@ -6,7 +6,7 @@ version = "0.1.0"
 [deps]
 ContinuousFlows = "a619b042-bc39-44bf-9795-de5439ba9456"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-SumDenseProduct = "433b66b6-b370-11e9-0fbb-5537bf1cf77b"
 ToyProblems = "642c45cc-aa20-11e9-0898-8bb31d50e544"
