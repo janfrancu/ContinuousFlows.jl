@@ -15,19 +15,17 @@ function MaskedAutoregressiveFlow(
 		ftype::String = "relu",
 		ordering::String = "sequential")
 	seed = time_ns()
-	@info "Building MAF with following params:"
-	@info isize, hsize, nlayers, osize, ftype, ordering
 	MaskedAutoregressiveFlow(
 		MADE(
 			isize, 
-			fill(hsize, nlayers), 
+			fill(hsize, nlayers-1), 
 			osize, 
 			ordering,
 			ftype=eval(:($(Symbol(ftype)))),
 			rs=seed), 
 		MADE(
 			isize, 
-			fill(hsize, nlayers), 
+			fill(hsize, nlayers-1), 
 			osize, 
 			ordering, 
 			ftype=eval(:($(Symbol(ftype)))),

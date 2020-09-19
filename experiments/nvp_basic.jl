@@ -35,8 +35,6 @@ end
 x = onemoon(1000)
 scatter(x[1,:], x[2,:])
 
-# x = vcat(onemoon(1000), onemoon(1000))
-
 p = (
     batchsize = 100,
     epochs = 100,
@@ -63,15 +61,6 @@ function loss(x, model, base)
 end
 
 one_batch = first(data)
-# z, logJ = model((one_batch, _init_logJ(one_batch)))
-
-# nvp = model[1]
-# X, logJ = one_batch,  _init_logJ(one_batch)
-# X_cond = X[nvp.mask,:]
-# α, β = nvp.cα(X_cond), nvp.cβ(X_cond)
-# Y = α .+ β .* X[.~nvp.mask,:]
-# logJ .+ sum(log.(abs.(β)), dims=1)
-
 loss(one_batch, model, base)
 gs = gradient(ps) do
     loss(one_batch, model, base)
@@ -103,7 +92,6 @@ scatter(base_samples[1,:], base_samples[2,:], size=(800,800))
 scatter!(x[1,:], x[2,:], size=(800,800))
 scatter!(yx[1,:], yx[2,:], ylim=(-6.0, 6.0), xlim=(-6.0,6.0) , size=(800,800))
 savefig("./RealNVP_4_flows_2_layer_relu_tanh_DAD.png")
-# heatmap(P_base, title="p_base", aspect_ratio=:equal)
 
 
 # check the inversion

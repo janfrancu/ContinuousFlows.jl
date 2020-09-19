@@ -32,7 +32,7 @@ p = (
     batchsize = 100,
     epochs = 100,
     num_flows = 2,
-    num_layers = 1,
+    num_layers = 2,
     hsize = 10,
     ordering = "natural"
     )
