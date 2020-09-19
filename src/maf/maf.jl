@@ -1,21 +1,60 @@
-struct MAF{A,B}
-	fμ::A 
-	fα::B
+using Flux
+
+struct MaskedAutoregressiveFlow
+	cα::MADE
+	cβ::MADE
 end
 
-Flux.@functor(MAF)
+Flux.@functor(MaskedAutoregressiveFlow)
 
-function MAF(in::Integer, hs, out::Integer, nat_ord::Bool = false, num_masks = 1, rs = time_ns())
-	MAF(MADE(in, hs, out, nat_ord, num_masks, rs), MADE(in, hs, out, nat_ord, num_masks, rs))
+function MaskedAutoregressiveFlow(
+		isize::Integer, 
+		hsize::Integer, 
+		nlayers::Integer, 
+		osize::Integer,
+		ftype::String = "relu",
+		ordering::String = "sequential")
+	seed = time_ns()
+	@info "Building MAF with following params:"
+	@info isize, hsize, nlayers, osize, ftype, ordering
+	MaskedAutoregressiveFlow(
+		MADE(
+			isize, 
+			fill(hsize, nlayers), 
+			osize, 
+			ordering,
+			ftype=eval(:($(Symbol(ftype)))),
+			rs=seed), 
+		MADE(
+			isize, 
+			fill(hsize, nlayers), 
+			osize, 
+			ordering, 
+			ftype=eval(:($(Symbol(ftype)))),
+			ptype=exp,
+			rs=seed),
+		)
 end
 
-function (m::MAF)(xx::Tuple)
-	x, logdet = xx
-	μ = m.fμ(x)
-	α = m.fα(x)
-	# α = min.(α, 25f0)
-	# α = max.(α, -25f0)
-	# @show (minimum(α),maximum(α))
-	u = exp.(0.5 .* α) .* (x - μ)
-	u, logdet .+ 0.5  * sum(α, dims = 1)
+function (maf::MaskedAutoregressiveFlow)(xl::Tuple)
+	X, logJ = xl
+	α, β = maf.cα(X), maf.cβ(X)
+	Y = α .+ β .* X
+	Y, logJ .+ sum(log.(abs.(β)), dims = 1)
+end
+
+function inv_flow(maf::MaskedAutoregressiveFlow, yl)
+	Y, logJ = yl
+	D, N = size(Y)
+	perm = maf.cα.m[0]
+	
+	X = zeros(eltype(Y), 0, N)
+	for (d, pd) in zip(1:D, perm)
+		X_cond = vcat(X, zeros(eltype(Y), D - d + 1, N))[perm, :]
+		α, β = maf.cα(X_cond)[pd:pd, :], maf.cβ(X_cond)[pd:pd, :]
+		X = vcat(X, (Y[pd:pd, :] .- α) ./ β)
+		logJ .-= log.(abs.(β))
+	end
+	
+	X[perm, :], logJ
 end
