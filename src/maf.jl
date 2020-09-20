@@ -1,6 +1,6 @@
 using Flux
 
-struct MaskedAutoregressiveFlow
+struct MaskedAutoregressiveFlow <: AbstractContinuousFlow
 	cα::MADE
 	cβ::MADE
 end

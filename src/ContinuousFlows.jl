@@ -1,5 +1,7 @@
 module ContinuousFlows
 
+abstract type AbstractContinuousFlow end
+
 include("utils.jl")
 export inv_flow
 

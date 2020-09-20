@@ -1,6 +1,6 @@
 using Flux, Flux.Zygote
 
-struct RealNVP
+struct RealNVP <: AbstractContinuousFlow
 	cα  # location conditioner
 	cβ  # scale conditioner
 	mask::Vector{Bool}
