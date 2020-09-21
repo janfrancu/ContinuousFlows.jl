@@ -27,8 +27,7 @@ function MaskedAutoregressiveFlow(
 			fill(hsize, nlayers-1), 
 			osize, 
 			ordering, 
-			ftype=relu,
-			ptype=exp,
+			ftype=tanh,
 			rs=seed),
 		)
 end
@@ -36,8 +35,8 @@ end
 function (maf::MaskedAutoregressiveFlow)(xl::Tuple)
 	X, logJ = xl
 	α, β = maf.cα(X), maf.cβ(X)
-	Y = α .+ β .* X
-	Y, logJ .+ sum(log.(abs.(β)), dims = 1)
+	Y = α .+ exp.(0.5 .* β) .* X
+	Y, logJ .+ 0.5 .* sum(β, dims = 1)
 end
 
 function inv_flow(maf::MaskedAutoregressiveFlow, yl)
