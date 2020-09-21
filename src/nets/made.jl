@@ -6,7 +6,7 @@ Simplification for use in MaskedAutoregressiveFlows by Jan Francu.
 =#
 
 using Flux, Random
-using Flux: glorot_uniform
+using Flux: glorot_uniform, zeros, ones
 # ------------------------------------------------------------------------------
 
 add_dims_r(a) = reshape(a, size(a)..., 1)
