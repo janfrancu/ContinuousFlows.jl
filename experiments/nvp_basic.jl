@@ -32,7 +32,7 @@ function buildmodel(isize, p)
         for i in 1:p.num_flows]...)
 end
 
-x = onemoon(1000)
+x = Float32.(onemoon(1000))
 scatter(x[1,:], x[2,:])
 
 p = (

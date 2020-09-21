@@ -1,9 +1,9 @@
 using Flux, Flux.Zygote
 
-struct RealNVP <: AbstractContinuousFlow
-	cα  # location conditioner
-	cβ  # scale conditioner
-	mask::Vector{Bool}
+struct RealNVP{A,B,Vb<:AbstractArray{Bool,1}} <: AbstractContinuousFlow
+	cα::A  # location conditioner
+	cβ::B  # scale conditioner
+	mask::Vb
 end
 
 function RealNVP(isize::Int, conditioner_builder::Function, even=true)
