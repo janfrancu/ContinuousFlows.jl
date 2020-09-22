@@ -29,10 +29,10 @@ scatter(x[1,:], x[2,:])
 
 p = (
     batchsize = 100,
-    epochs = 200,
+    epochs = 100,
     num_flows = 4,
     num_layers = 2,
-    hsize = 10,
+    hsize = 5,
     ordering = "natural"
     )
 
@@ -87,7 +87,7 @@ yx = inv_flow(model, (base_samples, _init_logJ(base_samples)))[1]
 scatter(base_samples[1,:], base_samples[2,:], size=(800,800))
 scatter!(x[1,:], x[2,:], size=(800,800))
 scatter!(yx[1,:], yx[2,:], ylim=(-6.0, 6.0), xlim=(-6.0,6.0) , size=(800,800))
-savefig("./MAF_4_flows_2_layer_relu-relu_2000.png")
+savefig("./MAF_4_flows_2_layer_relu-tanh_halving.png")
 
 # check the inversion
 x

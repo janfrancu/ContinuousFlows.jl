@@ -48,8 +48,8 @@ function inv_flow(maf::MaskedAutoregressiveFlow, yl)
 	for (d, pd) in zip(1:D, perm)
 		X_cond = vcat(X, zeros(eltype(Y), D - d + 1, N))[perm, :]
 		α, β = maf.cα(X_cond)[pd:pd, :], maf.cβ(X_cond)[pd:pd, :]
-		X = vcat(X, (Y[pd:pd, :] .- α) ./ β)
-		logJ .-= log.(abs.(β))
+		X = vcat(X, (Y[pd:pd, :] .- α) ./ exp.(0.5 .* β))
+		logJ .-= 0.5 .* β
 	end
 	
 	X[perm, :], logJ

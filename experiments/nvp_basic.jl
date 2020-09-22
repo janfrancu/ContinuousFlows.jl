@@ -38,7 +38,7 @@ scatter(x[1,:], x[2,:])
 p = (
     batchsize = 100,
     epochs = 100,
-    num_flows = 2,
+    num_flows = 4,
     num_layers = 2,
     hsize = 5,)
 
@@ -91,7 +91,7 @@ yx = inv_flow(model, (base_samples, _init_logJ(base_samples)))[1]
 scatter(base_samples[1,:], base_samples[2,:], size=(800,800))
 scatter!(x[1,:], x[2,:], size=(800,800))
 scatter!(yx[1,:], yx[2,:], ylim=(-6.0, 6.0), xlim=(-6.0,6.0) , size=(800,800))
-savefig("./RealNVP_4_flows_2_layer_relu_tanh_DAD.png")
+savefig("./RealNVP_4_flows_2_layer_relu_tanh_halving.png")
 
 
 # check the inversion
