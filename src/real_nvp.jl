@@ -6,11 +6,11 @@ struct RealNVP{A,B,Vb<:AbstractArray{Bool,1}} <: AbstractContinuousFlow
 	mask::Vb
 end
 
-function RealNVP(isize::Int, conditioner_builder::Function, even=true)
+function RealNVP(isize::Int, conditioner_builder, even=true)
 	mask = even ? (mod.(1:isize, 2) .== 0) : (mod.(1:isize, 2) .== 1)
 	d = sum(mask)
-	cα = conditioner_builder(d, isize - d, "relu", "identity")
-	cβ = conditioner_builder(d, isize - d, "tanh", "identity")
+	cα = conditioner_builder.α(d, isize - d)
+	cβ = conditioner_builder.β(d, isize - d)
 	return RealNVP(cα, cβ, mask)
 end
 

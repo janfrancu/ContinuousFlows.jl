@@ -12,6 +12,7 @@ function MaskedAutoregressiveFlow(
 		hsize::Integer, 
 		nlayers::Integer, 
 		osize::Integer,
+		activations,
 		ordering::String = "sequential")
 	seed = time_ns()
 	MaskedAutoregressiveFlow(
@@ -20,14 +21,14 @@ function MaskedAutoregressiveFlow(
 			fill(hsize, nlayers-1), 
 			osize, 
 			ordering,
-			ftype=relu,
+			ftype=activations.α,
 			rs=seed), 
 		MADE(
 			isize, 
 			fill(hsize, nlayers-1), 
 			osize, 
 			ordering, 
-			ftype=tanh,
+			ftype=activations.β,
 			rs=seed),
 		)
 end
