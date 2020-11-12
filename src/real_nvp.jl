@@ -58,3 +58,12 @@ end
 Zygote.@adjoint _cat_with_mask(x1, x2, mask) = _cat_with_mask(x1, x2, mask), Δ -> begin
 	(Δ[mask,:], Δ[.~mask,:], nothing)
 end
+
+function Base.show(io::IO, nvp::RealNVP)
+	print(io, "RealNVP(cα=")
+	join(io, nvp.cα, ", ")
+	print(io, ", cβ=")
+	join(io, nvp.cβ, ", ")
+	(nvp.bn !== nothing) && print(io, ", ", nvp.bn)
+	print(io, ")")
+end

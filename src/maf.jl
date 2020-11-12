@@ -65,3 +65,12 @@ function inv_flow(maf::MaskedAutoregressiveFlow, yl)
 	
 	X[perm, :], logJ
 end
+
+function Base.show(io::IO, maf::MaskedAutoregressiveFlow)
+	print(io, "MaskedAutoregressiveFlow(cα=")
+	print(io, maf.cα)
+	print(io, ", cβ=")
+	print(io, maf.cβ)
+	(maf.bn !== nothing) && print(io, ", ", maf.bn)
+	print(io, ")")
+end

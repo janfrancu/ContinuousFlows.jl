@@ -40,6 +40,11 @@ function (a::MaskedDense)(x)
   a.σ.(a.mask .* a.W * x .+ a.b)
 end
 
+function Base.show(io::IO, l::MaskedDense)
+  print(io, "MaskedDense(", size(l.W, 2), ", ", size(l.W, 1))
+  l.σ == identity || print(io, ", ", l.σ)
+  print(io, ")")
+end
 # ------------------------------------------------------------------------------
 
 mutable struct MADE
@@ -97,4 +102,9 @@ function (made::MADE)(x)
   made.net(x)
 end
 
+function Base.show(io::IO, made::MADE)
+  print(io, "MADE(")
+  join(io, made.net, ", ")
+  print(io, ")")
+end
 # ------------------------------------------------------------------------------
