@@ -44,14 +44,14 @@ function (maf::MaskedAutoregressiveFlow)(xl::Tuple)
 	if maf.bn !== nothing
 		bn = maf.bn
 		Z = bn(Y)
-		logJz = logJy .+ sum(log.(bn.γ)) .- 0.5*sum(log.(sqrt.(bn.σ² .+ bn.ϵ)))
+		logJz = logJy .+ sum(log.(bn.γ)) .- 0.5*sum(log.(bn.σ² .+ bn.ϵ))
 		return Z, logJz
 	end
 	Y, logJy
 end
 
 function inv_flow(maf::MaskedAutoregressiveFlow, yl)
-	Y, logJ = (nvp.bn !== nothing) ? inv_flow(nvp.bn, yl) : yl
+	Y, logJ = (maf.bn !== nothing) ? inv_flow(maf.bn, yl) : yl
 	D, N = size(Y)
 	perm = maf.cα.m[0]
 	

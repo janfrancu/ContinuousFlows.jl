@@ -29,7 +29,7 @@ function (nvp::RealNVP)(xl)
 	if nvp.bn !== nothing
 		bn = nvp.bn
 		ZZ = bn(Z)
-		logJzz = logJz .+ sum(log.(bn.γ)) .- 0.5*sum(log.(sqrt.(bn.σ² .+ bn.ϵ)))
+		logJzz = logJz .+ sum(log.(bn.γ)) .- 0.5*sum(log.(bn.σ² .+ bn.ϵ))
 		return ZZ, logJzz
 	end
 	Z, logJz
@@ -43,7 +43,8 @@ function inv_flow(nvp::RealNVP, yl)
 	_cat_with_mask(Y_cond, X, nvp.mask), logJ .- 0.5 .* sum(β, dims=1)
 end
 
-Flux.trainable(nvp::RealNVP) = (nvp.cα, nvp.cβ, )
+Flux.@functor RealNVP
+Flux.trainable(nvp::RealNVP) = (nvp.cα, nvp.cβ, nvp.bn, )
 
 function _cat_with_mask(x1, x2, mask)
 	M1, N = size(x1)

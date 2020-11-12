@@ -2,6 +2,7 @@ using Revise
 
 using Plots; gr()
 using Random
+using DrWatson
 using Distributions
 using DistributionsAD
 
@@ -30,36 +31,42 @@ function buildmodel(isize, p)
     m = Chain([
         RealNVP(
             isize, 
-            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype="relu")), 
-             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype="relu"))),
+            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_loc)), 
+             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_scl))),
             mod(i,2) == 0;
-            use_batchnorm=true) 
+            use_batchnorm=p.bn) 
         for i in 1:p.num_flows]...)
     Random.seed!()
-    
     m
 end
-
-x = Float32.(onemoon(1000))
-scatter(x[1,:], x[2,:])
 
 p = (
     batchsize = 100,
     epochs = 100,
     num_flows = 4,
     num_layers = 2,
+    act_loc = "relu",
+    act_scl = "tanh",
+    bn = true,
     hsize = 5,
-    seed = 42)
+    seed = 42,
+    wreg = 0.0,
+    lr = 1e-3
+)
+
+Random.seed!(p.seed)
+x = Float32.(onemoon(1000))
+scatter(x[1,:], x[2,:])
+Random.seed!()
+
 
 isize = size(x, 1)
-
-model = buildmodel(isize, p);
 base = MvNormal(isize, 1.0f0)
-
+model = buildmodel(isize, p);
+opt = (p.wreg > 0) ? ADAMW(p.lr, (0.9, 0.999), p.wreg) : Flux.ADAM(p.lr);
 ps = Flux.params(model);
 length(ps)
 
-opt = ADAM();
 data = Flux.Data.DataLoader(x, batchsize=p.batchsize)
 
 
@@ -70,6 +77,8 @@ function loss(x, model, base)
 end
 
 one_batch = first(data)
+z, logJ = model((one_batch, _init_logJ(one_batch)))
+
 loss(one_batch, model, base)
 gs = gradient(ps) do
     loss(one_batch, model, base)
@@ -89,10 +98,14 @@ Flux.@epochs p.epochs for batch in data
     train_steps += 1
 end
 
-testmode!(model, true)
+testmode!(model, true);
+savepath = datadir("RealNVP")
+!isdir(savepath) && mkdir(savepath)
+filename = joinpath(savepath, savename(p))
 
-xy, _ = model((x, _init_logJ(x)))
-scatter!(xy[1,:], xy[2,:], size=(800,800))
+# xy, _ = model((x, _init_logJ(x)))
+# scatter(x[1,:], x[2,:])
+# scatter!(xy[1,:], xy[2,:], size=(800,800))
 
 
 base_samples = rand(base, 1000)
@@ -101,12 +114,13 @@ yx = inv_flow(model, (base_samples, _init_logJ(base_samples)))[1]
 scatter(base_samples[1,:], base_samples[2,:], size=(800,800))
 scatter!(x[1,:], x[2,:], size=(800,800))
 scatter!(yx[1,:], yx[2,:], ylim=(-6.0, 6.0), xlim=(-6.0,6.0) , size=(800,800))
-savefig("./RealNVP_4_flows_2_layer_relu_tanh_halving.png")
+savefig(filename * ".png")
 
 
 # check the inversion
-x
-xy = model((x, _init_logJ(base_samples)))[1]
-yx = inv_flow(model, (xy, _init_logJ(base_samples)))[1]
+x, logJ = x, _init_logJ(x)
+xy, logJxy = model((x, _init_logJ(base_samples)))
+yx, logJyx = inv_flow(model, (xy, _init_logJ(base_samples)))
 
 isapprox(x, yx, atol=1e-3)
+isapprox(logJxy, -logJyx, atol=1e-3)

@@ -1,6 +1,8 @@
 using Revise
 
 using Plots; gr()
+using Random
+using DrWatson
 using Distributions
 using DistributionsAD
 
@@ -11,41 +13,52 @@ using ToyProblems
 
 
 function buildmodel(isize, p)
-    Chain([
+    Random.seed!(p.seed)
+    m = Chain([
         MaskedAutoregressiveFlow(
             isize, 
             p.hsize,
             p.num_layers, 
             isize, 
-            (α=relu, β=relu),
+            (α=eval(:($(Symbol(p.act_loc)))), β=eval(:($(Symbol(p.act_scl))))),
             (p.ordering == "natural") ? (
                 (mod(i, 2) == 0) ? "reversed" : "sequential"
-              ) : "random"
-            ) 
+              ) : "random";
+            seed=rand(UInt),
+            use_batchnorm=p.bn
+        ) 
         for i in 1:p.num_flows]...)
+    Random.seed!()
+    m
 end
-
-x = onemoon(1000)
-scatter(x[1,:], x[2,:])
 
 p = (
     batchsize = 100,
     epochs = 100,
     num_flows = 4,
     num_layers = 2,
+    act_loc = "relu",
+    act_scl = "tanh",
+    bn = true,
     hsize = 5,
-    ordering = "natural"
-    )
+    ordering = "natural",
+    seed = 42,
+    wreg = 0.0,
+    lr = 1e-3
+)
 
+Random.seed!(p.seed)
+x = Float32.(onemoon(1000))
+scatter(x[1,:], x[2,:])
+Random.seed!()
 
 isize = size(x, 1)
-model = buildmodel(isize, p);
 base = MvNormal(isize, 1.0f0)
-
+model = buildmodel(isize, p);
 ps = Flux.params(model);
+opt = (p.wreg > 0) ? ADAMW(p.lr, (0.9, 0.999), p.wreg) : Flux.ADAM(p.lr)
 length(ps)
 
-opt = ADAM();
 data = Flux.Data.DataLoader(x, batchsize=p.batchsize)
 
 
@@ -77,9 +90,14 @@ Flux.@epochs p.epochs for batch in data
     train_steps += 1
 end
 
-xy, _ = model((x, _init_logJ(x)))
-scatter(x[1,:], x[2,:])
-scatter!(xy[1,:], xy[2,:], size=(800,800))
+testmode!(model, true);
+savepath = datadir("MAF")
+!isdir(savepath) && mkdir(savepath)
+filename = joinpath(savepath, savename(p, digits=6))
+
+# xy, _ = model((x, _init_logJ(x)))
+# scatter(x[1,:], x[2,:])
+# scatter!(xy[1,:], xy[2,:], size=(800,800))
 
 
 base_samples = rand(base, 1000)
@@ -88,12 +106,13 @@ yx = inv_flow(model, (base_samples, _init_logJ(base_samples)))[1]
 scatter(base_samples[1,:], base_samples[2,:], size=(800,800))
 scatter!(x[1,:], x[2,:], size=(800,800))
 scatter!(yx[1,:], yx[2,:], ylim=(-6.0, 6.0), xlim=(-6.0,6.0) , size=(800,800))
-savefig("./MAF_4_flows_2_layer_relu-tanh_halving.png")
+savefig(filename * ".png")
 
 # check the inversion
-x
-xy = model((x, _init_logJ(x)))[1]
-yx = inv_flow(model, (xy, _init_logJ(xy)))[1]
+x, logJ = x, _init_logJ(x)
+xy, logJxy = model((x, _init_logJ(base_samples)))
+yx, logJyx = inv_flow(model, (xy, _init_logJ(base_samples)))
 
 isapprox(x, yx, atol=1e-3)
+isapprox(logJxy, -logJyx, atol=1e-3)
 
