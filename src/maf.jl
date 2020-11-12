@@ -15,6 +15,7 @@ function MaskedAutoregressiveFlow(
 		osize::Integer,
 		activations,
 		ordering::String="sequential";
+		lastlayer::String="linear",
 		use_batchnorm::Bool=true,
 		seed=time_ns())
 	MaskedAutoregressiveFlow(
@@ -24,6 +25,7 @@ function MaskedAutoregressiveFlow(
 			osize, 
 			ordering,
 			ftype=activations.α,
+			ptype=(lastlayer == "linear") ? identity : activations.α,
 			rs=seed), 
 		MADE(
 			isize, 
@@ -31,6 +33,7 @@ function MaskedAutoregressiveFlow(
 			osize, 
 			ordering, 
 			ftype=activations.β,
+			ptype=(lastlayer == "linear") ? identity : activations.β,
 			rs=seed),
 		use_batchnorm ? BatchNorm(isize) : nothing)
 end

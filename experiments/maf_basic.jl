@@ -14,6 +14,7 @@ using ToyProblems
 
 function buildmodel(isize, p)
     Random.seed!(p.seed)
+
     m = Chain([
         MaskedAutoregressiveFlow(
             isize, 
@@ -25,7 +26,8 @@ function buildmodel(isize, p)
                 (mod(i, 2) == 0) ? "reversed" : "sequential"
               ) : "random";
             seed=rand(UInt),
-            use_batchnorm=p.bn
+            use_batchnorm=p.bn,
+            lastlayer=p.lastlayer
         ) 
         for i in 1:p.num_flows]...)
     Random.seed!()
@@ -39,12 +41,13 @@ p = (
     num_layers = 2,
     act_loc = "relu",
     act_scl = "tanh",
-    bn = true,
+    bn = false,
     hsize = 5,
     ordering = "natural",
     seed = 42,
     wreg = 0.0,
-    lr = 1e-3
+    lr = 1e-3,
+    lastlayer = "linear"
 )
 
 Random.seed!(p.seed)
@@ -79,15 +82,18 @@ Flux.update!(opt, ps, gs)
 
 
 train_steps = 1
-Flux.@epochs p.epochs for batch in data
-    global train_steps
-    l = 0.0f0
-    gs = gradient(() -> begin l = loss(batch, model, base) end, ps)
-    Flux.update!(opt, ps, gs)
-    if mod(train_steps, 10) == 0
-        @info("$(train_steps) - loss: $(l)")
+for e in 1:p.epochs 
+    for batch in data
+        l = 0.0f0
+        gs = gradient(() -> begin l = loss(batch, model, base) end, ps)
+        Flux.update!(opt, ps, gs)
+        if mod(train_steps, 10) == 0
+            @info("$(train_steps) - loss: $(l)")
+            # @info("$(train_steps) - loss: $(l)\n\t\t\t $(model[1].bn.γ) $(model[1].bn.β) \n\t\t\t $(model[2].bn.γ) $(model[2].bn.β) \n\t\t\t $(model[3].bn.γ) $(model[3].bn.β) \n\t\t\t $(model[4].bn.γ) $(model[4].bn.β)")
+            # @info("$(train_steps) - loss: $(l)\n\t\t\t $(model[1].bn.σ²) $(model[1].bn.μ) \n\t\t\t $(model[2].bn.σ²) $(model[2].bn.μ) \n\t\t\t $(model[3].bn.σ²) $(model[3].bn.μ) \n\t\t\t $(model[4].bn.σ²) $(model[4].bn.β)")
+        end
+        train_steps += 1
     end
-    train_steps += 1
 end
 
 testmode!(model, true);

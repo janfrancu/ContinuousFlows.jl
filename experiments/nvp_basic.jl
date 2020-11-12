@@ -28,11 +28,12 @@ end
 function buildmodel(isize, p)
     Random.seed!(p.seed)
 
+    lastlayer = (p.lastlayer == "linear") ? "linear" : ""
     m = Chain([
         RealNVP(
             isize, 
-            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_loc)), 
-             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_scl))),
+            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_loc, lastlayer=lastlayer)), 
+             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_scl, lastlayer=lastlayer))),
             mod(i,2) == 0;
             use_batchnorm=p.bn) 
         for i in 1:p.num_flows]...)
@@ -51,7 +52,8 @@ p = (
     hsize = 5,
     seed = 42,
     wreg = 0.0,
-    lr = 1e-3
+    lr = 1e-3,
+    lastlayer = "linear"
 )
 
 Random.seed!(p.seed)
@@ -87,15 +89,16 @@ Flux.update!(opt, ps, gs)
 
 
 train_steps = 1
-Flux.@epochs p.epochs for batch in data
-    global train_steps
-    l = 0.0f0
-    gs = gradient(() -> begin l = loss(batch, model, base) end, ps)
-    Flux.update!(opt, ps, gs)
-    if mod(train_steps, 10) == 0
-        @info("$(train_steps) - loss: $(l)")
+for e in 1:p.epochs
+    for batch in data
+        l = 0.0f0
+        gs = gradient(() -> begin l = loss(batch, model, base) end, ps)
+        Flux.update!(opt, ps, gs)
+        if mod(train_steps, 10) == 0
+            @info("$(train_steps) - loss: $(l)")
+        end
+        train_steps += 1
     end
-    train_steps += 1
 end
 
 testmode!(model, true);
