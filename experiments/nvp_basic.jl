@@ -1,6 +1,7 @@
 using Revise
 
 using Plots; gr()
+using Random
 using Distributions
 using DistributionsAD
 
@@ -24,12 +25,19 @@ function build_mlp(ks::Vector{Int}; ftype::String = "relu", lastlayer::String = 
 end
 
 function buildmodel(isize, p)
-    Chain([
+    Random.seed!(p.seed)
+
+    m = Chain([
         RealNVP(
             isize, 
-            (d, o, ftype, postprocess) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=ftype, lastlayer=postprocess),
-            mod(i,2) == 0) 
+            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype="relu")), 
+             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype="relu"))),
+            mod(i,2) == 0;
+            use_batchnorm=true) 
         for i in 1:p.num_flows]...)
+    Random.seed!()
+    
+    m
 end
 
 x = Float32.(onemoon(1000))
@@ -40,7 +48,8 @@ p = (
     epochs = 100,
     num_flows = 4,
     num_layers = 2,
-    hsize = 5,)
+    hsize = 5,
+    seed = 42)
 
 isize = size(x, 1)
 
@@ -80,6 +89,7 @@ Flux.@epochs p.epochs for batch in data
     train_steps += 1
 end
 
+testmode!(model, true)
 
 xy, _ = model((x, _init_logJ(x)))
 scatter!(xy[1,:], xy[2,:], size=(800,800))

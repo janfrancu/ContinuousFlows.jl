@@ -3,6 +3,7 @@ using Flux
 struct MaskedAutoregressiveFlow <: AbstractContinuousFlow
 	cα::MADE
 	cβ::MADE
+	bn::Union{BatchNorm, Nothing}
 end
 
 Flux.@functor(MaskedAutoregressiveFlow)
@@ -13,8 +14,9 @@ function MaskedAutoregressiveFlow(
 		nlayers::Integer, 
 		osize::Integer,
 		activations,
-		ordering::String = "sequential")
-	seed = time_ns()
+		ordering::String="sequential";
+		use_batchnorm::Bool=true,
+		seed=time_ns())
 	MaskedAutoregressiveFlow(
 		MADE(
 			isize, 
@@ -30,18 +32,26 @@ function MaskedAutoregressiveFlow(
 			ordering, 
 			ftype=activations.β,
 			rs=seed),
-		)
+		use_batchnorm ? BatchNorm(isize) : nothing)
 end
 
 function (maf::MaskedAutoregressiveFlow)(xl::Tuple)
 	X, logJ = xl
 	α, β = maf.cα(X), maf.cβ(X)
 	Y = α .+ exp.(0.5 .* β) .* X
-	Y, logJ .+ 0.5 .* sum(β, dims = 1)
+	logJy = logJ .+ 0.5 .* sum(β, dims = 1)
+	
+	if maf.bn !== nothing
+		bn = maf.bn
+		Z = bn(Y)
+		logJz = logJy .+ sum(log.(bn.γ)) .- 0.5*sum(log.(sqrt.(bn.σ² .+ bn.ϵ)))
+		return Z, logJz
+	end
+	Y, logJy
 end
 
 function inv_flow(maf::MaskedAutoregressiveFlow, yl)
-	Y, logJ = yl
+	Y, logJ = (nvp.bn !== nothing) ? inv_flow(nvp.bn, yl) : yl
 	D, N = size(Y)
 	perm = maf.cα.m[0]
 	

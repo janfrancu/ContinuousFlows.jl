@@ -17,6 +17,7 @@ function buildmodel(isize, p)
             p.hsize,
             p.num_layers, 
             isize, 
+            (α=relu, β=relu),
             (p.ordering == "natural") ? (
                 (mod(i, 2) == 0) ? "reversed" : "sequential"
               ) : "random"
