@@ -47,14 +47,14 @@ p = (
     num_flows = 4,
     num_layers = 2,
     act_loc = "relu",
-    act_scl = "tanh",
-    bn = false,
+    act_scl = "relu",
+    bn = true,
     hsize = 5,
     seed = 42,
     wreg = 0.0,
     lr = 1e-3,
     lastlayer = "linear",
-    tag = "inv"
+    tag = "inv_betasstanh"
 )
 
 Random.seed!(p.seed)
