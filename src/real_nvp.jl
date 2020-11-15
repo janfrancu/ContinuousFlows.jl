@@ -22,9 +22,11 @@ function (nvp::RealNVP)(xl)
 	X, logJ = xl
 	X_cond = X[nvp.mask,:]
 	α, β = nvp.cα(X_cond), nvp.cβ(X_cond)
-	Y = α .+ exp.(0.5 .* β) .* X[.~nvp.mask,:]
+	Y = exp.(-0.5 .* β) .* (X[.~nvp.mask,:] .- α) # inv
+	# Y = α .+ exp.(0.5 .* β) .* X[.~nvp.mask,:]
 	Z = _cat_with_mask(X_cond, Y, nvp.mask)
-	logJz = logJ .+ 0.5 .* sum(β, dims=1)
+	logJz = logJ .- 0.5 .* sum(β, dims=1) # inv
+	# logJz = logJ .+ 0.5 .* sum(β, dims=1)
 
 	if nvp.bn !== nothing
 		bn = nvp.bn
@@ -39,8 +41,10 @@ function inv_flow(nvp::RealNVP, yl)
 	Y, logJ = (nvp.bn !== nothing) ? inv_flow(nvp.bn, yl) : yl
 	Y_cond = Y[nvp.mask,:]
 	α, β = nvp.cα(Y_cond), nvp.cβ(Y_cond)
-	X = (Y[.~nvp.mask,:] .- α) ./ exp.(0.5 .* β)
-	_cat_with_mask(Y_cond, X, nvp.mask), logJ .- 0.5 .* sum(β, dims=1)
+	X = exp.(0.5 .* β) .* Y[.~nvp.mask,:] .+ α # inv
+	# X = exp.(-0.5 .* β) .* (Y[.~nvp.mask,:] .- α)
+	_cat_with_mask(Y_cond, X, nvp.mask), logJ .+ 0.5 .* sum(β, dims=1) # inv
+	# _cat_with_mask(Y_cond, X, nvp.mask), logJ .- 0.5 .* sum(β, dims=1)
 end
 
 Flux.@functor RealNVP

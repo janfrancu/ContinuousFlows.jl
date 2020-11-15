@@ -48,12 +48,13 @@ p = (
     num_layers = 2,
     act_loc = "relu",
     act_scl = "tanh",
-    bn = true,
+    bn = false,
     hsize = 5,
     seed = 42,
     wreg = 0.0,
     lr = 1e-3,
-    lastlayer = "linear"
+    lastlayer = "linear",
+    tag = "inv"
 )
 
 Random.seed!(p.seed)
@@ -104,7 +105,7 @@ end
 testmode!(model, true);
 savepath = datadir("RealNVP")
 !isdir(savepath) && mkdir(savepath)
-filename = joinpath(savepath, savename(p))
+filename = joinpath(savepath, savename(p, digits=6))
 
 # xy, _ = model((x, _init_logJ(x)))
 # scatter(x[1,:], x[2,:])
@@ -122,8 +123,8 @@ savefig(filename * ".png")
 
 # check the inversion
 x, logJ = x, _init_logJ(x)
-xy, logJxy = model((x, _init_logJ(base_samples)))
-yx, logJyx = inv_flow(model, (xy, _init_logJ(base_samples)))
+xy, logJxy = model((x, _init_logJ(x)))
+yx, logJyx = inv_flow(model, (xy, _init_logJ(x)))
 
 isapprox(x, yx, atol=1e-3)
 isapprox(logJxy, -logJyx, atol=1e-3)
