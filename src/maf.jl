@@ -17,8 +17,9 @@ function MaskedAutoregressiveFlow(
 		ordering::String="sequential";
 		lastlayer::String="linear",
 		use_batchnorm::Bool=true,
+		lastzero::Bool=true,
 		seed=time_ns())
-	MaskedAutoregressiveFlow(
+	m = MaskedAutoregressiveFlow(
 		MADE(
 			isize, 
 			fill(hsize, nlayers-1), 
@@ -35,18 +36,26 @@ function MaskedAutoregressiveFlow(
 			ftype=activations.β,
 			ptype=(lastlayer == "linear") ? identity : activations.β,
 			rs=seed),
-		use_batchnorm ? BatchNorm(isize) : nothing)
+		use_batchnorm ? BatchNorm(isize; momentum=1.0f0) : nothing)
+	if lastzero
+		m.cα.net[end].W .*= 0.0f0
+		m.cβ.net[end].W .*= 0.0f0
+	end
+	m
 end
 
 function (maf::MaskedAutoregressiveFlow)(xl::Tuple)
 	X, logJ = xl
 	α, β = maf.cα(X), maf.cβ(X)
-	Y = α .+ exp.(0.5 .* β) .* X
-	logJy = logJ .+ 0.5 .* sum(β, dims = 1)
+	# Y = exp.( 0.5 .* β) .* X .+ α
+	Y = exp.(-0.5 .* β) .*(X .- α) # inv
+	# logJy = logJ .+ 0.5 .* sum(β, dims = 1)
+	logJy = logJ .- 0.5 .* sum(β, dims = 1) # inv
 	
 	if maf.bn !== nothing
 		bn = maf.bn
 		Z = bn(Y)
+		# @info("", X, Y, Z, α, β, exp.(0.5 .* β), hcat(bn.μ, bn.β), hcat(bn.σ², bn.γ))
 		logJz = logJy .+ sum(log.(bn.γ)) .- 0.5*sum(log.(bn.σ² .+ bn.ϵ))
 		return Z, logJz
 	end
@@ -62,8 +71,10 @@ function inv_flow(maf::MaskedAutoregressiveFlow, yl)
 	for (d, pd) in zip(1:D, perm)
 		X_cond = vcat(X, zeros(eltype(Y), D - d + 1, N))[perm, :]
 		α, β = maf.cα(X_cond)[pd:pd, :], maf.cβ(X_cond)[pd:pd, :]
-		X = vcat(X, (Y[pd:pd, :] .- α) ./ exp.(0.5 .* β))
-		logJ .-= 0.5 .* β
+		# X = vcat(X, exp.(-0.5 .* β) .* (Y[pd:pd, :] .- α))
+		X = vcat(X,  exp.(0.5 .* β) .* Y[pd:pd, :] .+ α) # inv
+		# logJ .-= 0.5 .* β
+		logJ .+= 0.5 .* β # inv
 	end
 	
 	X[perm, :], logJ
