@@ -16,13 +16,20 @@ build_mlp(ks::Vector{Int}, fs::Vector) = Flux.Chain(map(i -> Dense(i[2],i[3],i[1
 build_mlp(isize::Int, hsize::Int, osize::Int, nlayers::Int; kwargs...) =
     build_mlp(vcat(isize, fill(hsize, nlayers-1)..., osize); kwargs...)
 
-function build_mlp(ks::Vector{Int}; ftype::String = "relu", lastlayer::String = "")
+function build_mlp(ks::Vector{Int}; ftype::String="relu", lastlayer::String="", lastzero=true)
     ftype = (ftype == "linear") ? "identity" : ftype
     fs = Array{Any}(fill(eval(:($(Symbol(ftype)))), length(ks) - 1))
     if !isempty(lastlayer)
         fs[end] = (lastlayer == "linear") ? identity : eval(:($(Symbol(lastlayer))))
     end
-    build_mlp(ks, fs)
+    m = build_mlp(ks, fs)
+
+    # set last layer's params to zeros
+    if lastzero
+        m[end].W .*= 0.0f0
+        m[end].b .*= 0.0f0
+    end
+    m
 end
 
 function buildmodel(isize, p)
@@ -32,8 +39,8 @@ function buildmodel(isize, p)
     m = Chain([
         RealNVP(
             isize, 
-            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_loc, lastlayer=lastlayer)), 
-             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_scl, lastlayer=lastlayer))),
+            (α = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_loc, lastlayer=lastlayer, lastzero=p.lastzero)), 
+             β = ((d, o) -> build_mlp(d, p.hsize, o, p.num_layers, ftype=p.act_scl, lastlayer=lastlayer, lastzero=p.lastzero))),
             mod(i,2) == 0;
             use_batchnorm=p.bn) 
         for i in 1:p.num_flows]...)
@@ -54,6 +61,7 @@ p = (
     wreg = 0.0,
     lr = 1e-3,
     lastlayer = "linear",
+    lastzero = true, 
     tag = "inv_betasstanh"
 )
 
